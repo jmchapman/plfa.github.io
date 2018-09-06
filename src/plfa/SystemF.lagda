@@ -43,6 +43,7 @@ The only kind is `*`, the kind of types.
 \begin{code}
 data Kind : Set where
   * : Kind
+  -- _⇒⋆_ : Kind → Kind → Kind
 \end{code}
 Let `J`, `K` range over kinds.
 
@@ -838,7 +839,7 @@ progress⋆ (M ⇒ N) = done _V-⇒_
 
 \begin{code}
 data Progress {A : ∅ ⊢⋆ *} (M : ∅ ⊢ A) : Set where
-  step : ∀ {N : ∅ ⊢ A}
+  step : ∀ {N}
     → M —→ N
       -------------
     → Progress M
@@ -861,4 +862,59 @@ progress (Λ M)    = done V-Λ_
 progress (M ·⋆ A) with progress M
 progress (M ·⋆ A)      | step p  = step (ξ⋆-· p)
 progress (.(Λ _) ·⋆ A) | done V-Λ_ = step β-Λ
+\end{code}
+
+## Evaluation
+
+Transitive closure of reduction
+\begin{code}
+data _—↠_ {J Γ}{A : ∥ Γ ∥ ⊢⋆ J} (L : Γ ⊢ A) : (Γ ⊢ A) → Set where
+  done : L —↠ L
+  continue : ∀ {M N} → L —→ M → M —↠ N → L —↠ N  
+\end{code}
+
+As previously, gas is specified by a natural number.
+\begin{code}
+open import Data.Nat
+data Gas : Set where
+  gas : ℕ → Gas
+\end{code}
+When our evaluator returns a term `N`, it will either give evidence that
+`N` is a value or indicate that it ran out of gas.
+\begin{code}
+data Finished {Γ J}{A : ∥ Γ ∥ ⊢⋆ J} (N : Γ ⊢ A) : Set where
+
+   done :
+       Value N
+       ----------
+     → Finished N
+
+   out-of-gas :
+       ----------
+       Finished N
+\end{code}
+Given a term `L` of type `A`, the evaluator will, for some `N`, return
+a reduction sequence from `L` to `N` and an indication of whether
+reduction finished.
+\begin{code}
+data Steps : ∀ {J}{A : ∅ ⊢⋆ J} → ∅ ⊢ A → Set where
+
+  steps : ∀ {J}{A : ∅ ⊢⋆ J} {L N : ∅ ⊢ A}
+    → L —↠ N
+    → Finished N
+      ----------
+    → Steps L
+\end{code}
+The evaluator takes gas and a term and returns the corresponding steps.
+\begin{code}
+eval : ∀ {A : ∅ ⊢⋆ *}
+  → Gas
+  → (L : ∅ ⊢ A)
+    -----------
+  → Steps L
+eval (gas zero) M = steps done out-of-gas
+eval (gas (suc n)) M with progress M
+eval (gas (suc n)) M | step {N} p  with eval (gas n) N
+eval (gas (suc n)) M | step {N} p | steps ps q = steps (continue p ps) q
+eval (gas (suc n)) M | done vM = steps done (done vM)
 \end{code}
