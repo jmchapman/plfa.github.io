@@ -733,6 +733,21 @@ _[_]  {J} {Γ}{A}{B} t s =
                  t) 
 \end{code}
 
+\begin{code}
+_[_]⋆⋆ : ∀ {J Γ K} {B : ∥ Γ ,⋆ K ∥ ⊢⋆ J}
+        → Γ ,⋆ K ⊢ B
+        → (A : ∥ Γ ∥ ⊢⋆ K)
+          ---------
+        → Γ ⊢ B [ A ]⋆
+_[_]⋆⋆ {J}{Γ}{K}{B} t A =
+  subst (subst⋆cons `_ A)
+        (λ{(T_ {A = A'} x) → substEq (λ A → Γ ⊢ A)
+                                     (trans (sym (subst⋆id A'))
+                                     (subst⋆rename⋆ S_ (subst⋆cons `_ A) A'))
+                                     (` x)})
+          t
+\end{code}
+
 ## Values
 
 \begin{code}
@@ -767,16 +782,85 @@ data _—→⋆_ : ∀ {Γ J} → (Γ ⊢⋆ J) → (Γ ⊢⋆ J) → Set where
 
 \end{code}
 
-## Reduction
+## Intrinsically Type Preserving Reduction
 
 \begin{code}
 infix 2 _—→_
 
 data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 
+  ξ-·₁ : ∀ {Γ A B} {L L′ : Γ ⊢ A ⇒ B} {M : Γ ⊢ A}
+    → L —→ L′
+      -----------------
+    → L · M —→ L′ · M
+
+  ξ-·₂ : ∀ {Γ A B} {V : Γ ⊢ A ⇒ B} {M M′ : Γ ⊢ A}
+    → Value V
+    → M —→ M′
+      --------------
+    → V · M —→ V · M′
+
+  ξ⋆-· : ∀ {Γ B}{L L′ : Γ ⊢ Π B}{A}
+    → L —→ L′
+      -----------------
+    → L ·⋆ A —→ L′ ·⋆ A
+    
   β-ƛ : ∀ {Γ A B} {N : Γ , A ⊢ B} {W : Γ ⊢ A}
     → Value W
       -------------------
     → (ƛ N) · W —→ N [ W ]
+
+  β-Λ : ∀ {Γ}{B : ∥ Γ ∥ ,⋆ * ⊢⋆ *}{N : Γ ,⋆ * ⊢ B}{W}
+    → TValue W 
+      -------------------
+    → (Λ N) ·⋆ W —→ N [ W ]⋆⋆
+
 \end{code}
 
+\begin{code}
+data Progress⋆ {K} (M : ∅ ⊢⋆ K) : Set where
+{-  step : ∀ {N : ∅ ⊢ A}
+    → M —→ N
+      -------------
+    → Progress M -}
+  done :
+      TValue M
+      ----------
+    → Progress⋆ M
+\end{code}
+
+\begin{code}
+progress⋆ : ∀ {K} → (M : ∅ ⊢⋆ K) → Progress⋆ M
+progress⋆ (` ())
+progress⋆ (Π M) = done V-Π_
+progress⋆ (M ⇒ N) = done _V-⇒_
+
+\end{code}
+
+\begin{code}
+data Progress {A : ∅ ⊢⋆ *} (M : ∅ ⊢ A) : Set where
+  step : ∀ {N : ∅ ⊢ A}
+    → M —→ N
+      -------------
+    → Progress M
+  done :
+      Value M
+      ----------
+    → Progress M
+\end{code}
+
+\begin{code}
+progress : ∀ {A} → (M : ∅ ⊢ A) → Progress M
+progress (` ())
+progress (ƛ M)    = done V-ƛ
+progress (L · M)  with progress L
+...                   | step p = step (ξ-·₁ p)
+...                   | done vL with progress M
+...                              | step p  = step (ξ-·₂ vL p)
+progress (.(ƛ _) · M) | done V-ƛ | done vM = step (β-ƛ vM)
+progress (Λ M)    = done V-Λ_
+progress (M ·⋆ A) with progress M
+progress (M ·⋆ A) | step p = step (ξ⋆-· p)
+progress (M ·⋆ A) | done vM with progress⋆ A
+progress (.(Λ _) ·⋆ A) | done V-Λ_ | done vA = step (β-Λ vA)
+\end{code}
