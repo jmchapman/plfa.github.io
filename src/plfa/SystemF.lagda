@@ -508,6 +508,7 @@ subst⋆subst⋆cons σ⋆ M (S x) =
         (subst⋆id (σ⋆ x))
 \end{code}
 
+
 ## Contexts and erasure
 
 We need to mutually define contexts and their
@@ -598,6 +599,11 @@ data _⊢_ : ∀ {J} (Γ : Ctx) → ∥ Γ ∥ ⊢⋆ J → Set where
     → (S : ∥ Γ ∥ ,⋆ * ⊢⋆ *)
     → (M : Γ ⊢ S [ μ S ]⋆)
     → Γ ⊢ μ S
+
+  unwrap : ∀{Γ}
+    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
+    → (M : Γ ⊢ μ S)
+    → Γ ⊢ S [ μ S ]⋆
 \end{code}
 
 ## Remainder
@@ -735,6 +741,12 @@ rename {Γ}{Δ} ρ⋆ ρ (wrap M N) =
                                 (ext⋆ ρ⋆)
                                 (subst⋆cons `_ (μ (rename⋆ (ext⋆ ρ⋆) M))) M)))
                 (rename ρ⋆ ρ N))
+rename {Γ}{Δ} ρ⋆ ρ (unwrap {S = S} M) =
+  substEq (λ A → Δ ⊢ A)
+          (trans (sym (subst⋆rename⋆ _ _ S))
+                 (trans (subst⋆cong _ _ (rename⋆subst⋆cons _ _) S)
+                        (rename⋆subst⋆ _ _ S)))
+          (unwrap (rename ρ⋆ ρ M))
 \end{code}
 
 \begin{code}
@@ -823,6 +835,12 @@ subst {Γ}{Δ} σ⋆ σ (wrap M N) =
                                 (subst⋆cons `_ (μ (subst⋆ (exts⋆ σ⋆) M)))
                                 M)))
                 (subst σ⋆ σ N))
+subst {Γ}{Δ} σ⋆ σ (unwrap {S = S} M) =
+  substEq (λ A → Δ ⊢ A)
+          (trans (trans (sym (subst⋆comp _ _ S))
+                        (subst⋆cong _ _ (subst⋆subst⋆cons _ _) S))
+                 (subst⋆comp _ _ S))
+          (unwrap (subst σ⋆ σ M))
 \end{code}
 
 \begin{code}
@@ -869,7 +887,7 @@ _[_]⋆⋆ {J}{Γ}{K}{B} t A =
                                      (` x)})
           t
 \end{code}
-
+0
 ## Values
 
 \begin{code}
@@ -972,7 +990,16 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
     → M —→ M'
     → wrap S M —→ wrap S M'
 
+  ξ-unwrap : ∀{Γ}
+    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
+    → {M M' : Γ ⊢ μ S}
+    → M —→ M'
+    → unwrap M —→ unwrap M'
 
+  β-wrap : ∀{Γ}
+    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
+    → {M : Γ ⊢ S [ μ S ]⋆}    
+    → unwrap (wrap S M) —→ M
 \end{code}
 
 \begin{code}
@@ -1029,6 +1056,9 @@ progress (.(Λ _) ·⋆ A) | done V-Λ_ = step β-Λ
 progress (wrap A M) with progress M
 ... | step p  = step (ξ-wrap p)
 ... | done vM = done (V-wrap vM)
+progress (unwrap M) with progress M
+progress (unwrap M) | step p = step (ξ-unwrap p)
+progress (unwrap .(wrap _ _)) | done (V-wrap vM) = step β-wrap
 \end{code}
 
 ## Evaluation
