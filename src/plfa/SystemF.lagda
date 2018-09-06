@@ -43,7 +43,7 @@ The only kind is `*`, the kind of types.
 \begin{code}
 data Kind : Set where
   * : Kind
-  -- _⇒⋆_ : Kind → Kind → Kind
+  _⇒_ : Kind → Kind → Kind
 \end{code}
 Let `J`, `K` range over kinds.
 
@@ -97,6 +97,12 @@ data _⊢⋆_ : Ctx⋆ → Kind → Set where
     → Φ ⊢⋆ *
       ------
     → Φ ⊢⋆ *
+
+  ƛ_ :  ∀ {Φ K J}
+    → Φ ,⋆ K ⊢⋆ J 
+      -----------
+    → Φ ⊢⋆ K ⇒ J
+
 \end{code}
 Let `A`, `B`, `C` range over types.
 
@@ -122,6 +128,7 @@ rename⋆ : ∀ {Φ Ψ}
 rename⋆ ρ (` α)    =  ` (ρ α)
 rename⋆ ρ (Π B)    =  Π (rename⋆ (ext⋆ ρ) B)
 rename⋆ ρ (A ⇒ B)  =  rename⋆ ρ A ⇒ rename⋆ ρ B
+rename⋆ ρ (ƛ B)    = ƛ rename⋆ (ext⋆ ρ) B 
 \end{code}
 
 Weakening is a special case of renaming.
@@ -169,6 +176,9 @@ rename⋆cong f g p (Π A)   =
   cong Π_ (rename⋆cong (ext⋆ f) (ext⋆ g) (ext⋆cong f g p) A)
 rename⋆cong f g p (A ⇒ B) =
   cong₂ _⇒_ (rename⋆cong f g p A) (rename⋆cong f g p B)
+rename⋆cong f g p (ƛ A)   =
+  cong ƛ_ (rename⋆cong (ext⋆ f) (ext⋆ g) (ext⋆cong f g p) A)
+
 \end{code}
 
 First functor law for rename⋆
@@ -178,6 +188,8 @@ rename⋆id (` x)   = refl
 rename⋆id (Π t)   =
   cong Π_ (trans (rename⋆cong (ext⋆ id) id ext⋆id t) (rename⋆id t))
 rename⋆id (t ⇒ u) = cong₂ _⇒_ (rename⋆id t) (rename⋆id u)
+rename⋆id (ƛ t)   =
+  cong ƛ_ (trans (rename⋆cong (ext⋆ id) id ext⋆id t) (rename⋆id t))
 \end{code}
 
 Second functor law for ext⋆
@@ -204,6 +216,11 @@ rename⋆comp g f (Π A)   =
               (rename⋆comp (ext⋆ g) (ext⋆ f) A))
 rename⋆comp g f (A ⇒ B) =
   cong₂ _⇒_ (rename⋆comp g f A) (rename⋆comp g f B)
+rename⋆comp g f (ƛ A) = 
+  cong ƛ_
+       (trans (rename⋆cong (ext⋆ (f ∘ g)) (ext⋆ f ∘ ext⋆ g) (ext⋆comp g f) A)
+              (rename⋆comp (ext⋆ g) (ext⋆ f) A))
+
 \end{code}
 ## Type substitution
 
@@ -228,6 +245,7 @@ subst⋆ : ∀ {Φ Ψ}
 subst⋆ σ (` α)     =  σ α
 subst⋆ σ (Π B)     =  Π (subst⋆ (exts⋆ σ) B)
 subst⋆ σ (A ⇒ B)   =  subst⋆ σ A ⇒ subst⋆ σ B
+subst⋆ σ (ƛ B)     =  ƛ (subst⋆ (exts⋆ σ) B)
 \end{code}
 
 Extend a substitution with an additional type (analogous to cons for
@@ -283,6 +301,9 @@ subst⋆cong f g p (Π A)   =
   cong Π_ (subst⋆cong (exts⋆ f) (exts⋆ g) (exts⋆cong f g p) A)
 subst⋆cong f g p (A ⇒ B) =
   cong₂ _⇒_ (subst⋆cong f g p A) (subst⋆cong f g p B)
+subst⋆cong f g p (ƛ A)   =
+  cong ƛ_ (subst⋆cong (exts⋆ f) (exts⋆ g) (exts⋆cong f g p) A)
+
 \end{code}
 
 First monad law for subst⋆
@@ -293,6 +314,9 @@ subst⋆id (` x)   = refl
 subst⋆id (Π A)   =
   cong Π_ (trans (subst⋆cong (exts⋆ `_) `_ exts⋆id A) (subst⋆id A))
 subst⋆id (A ⇒ B) = cong₂ _⇒_ (subst⋆id A) (subst⋆id B)
+subst⋆id (ƛ A)    =
+  cong ƛ_ (trans (subst⋆cong (exts⋆ `_) `_ exts⋆id A) (subst⋆id A))
+
 \end{code}
 
 Fusion of exts⋆ and ext⋆
@@ -322,6 +346,11 @@ subst⋆rename⋆ g f (Π A)   =
               (subst⋆rename⋆ (ext⋆ g) (exts⋆ f) A)  )
 subst⋆rename⋆ g f (A ⇒ B) =
   cong₂ _⇒_ (subst⋆rename⋆ g f A) (subst⋆rename⋆ g f B)
+subst⋆rename⋆ g f (ƛ A)   =
+  cong ƛ_
+       (trans (subst⋆cong (exts⋆ (f ∘ g)) (exts⋆ f ∘ ext⋆ g) (exts⋆ext⋆ g f) A)
+              (subst⋆rename⋆ (ext⋆ g) (exts⋆ f) A)  )
+
 \end{code}
 
 Fusion for exts⋆ and ext⋆
@@ -355,6 +384,14 @@ rename⋆subst⋆ g f (Π A)   =
               (rename⋆subst⋆ (exts⋆ g) (ext⋆ f) A))
 rename⋆subst⋆ g f (A ⇒ B) =
   cong₂ _⇒_ (rename⋆subst⋆ g f A) (rename⋆subst⋆ g f B)
+rename⋆subst⋆ g f (ƛ A)    =
+  cong ƛ_
+       (trans (subst⋆cong (exts⋆ (rename⋆ f ∘ g))
+                          (rename⋆ (ext⋆ f) ∘ exts⋆ g)
+                          (rename⋆ext⋆exts⋆ g f)
+                 A)
+              (rename⋆subst⋆ (exts⋆ g) (ext⋆ f) A))
+
 \end{code}
 
 Fusion of two exts⋆
@@ -387,6 +424,13 @@ subst⋆comp g f (Π A)   =
                              A)
                  (subst⋆comp (exts⋆ g) (exts⋆ f) A))
 subst⋆comp g f (A ⇒ B) = cong₂ _⇒_ (subst⋆comp g f A) (subst⋆comp g f B)
+subst⋆comp g f (ƛ A)    =
+  cong ƛ_ (trans (subst⋆cong (exts⋆ (subst⋆ f ∘ g))
+                             (subst⋆ (exts⋆ f) ∘ exts⋆ g)
+                             (exts⋆comp g f)
+                             A)
+                 (subst⋆comp (exts⋆ g) (exts⋆ f) A))
+
 \end{code}
 
 Commuting subst⋆cons and rename⋆
@@ -616,7 +660,7 @@ rename : ∀ {Γ Δ}
     ------------------------
   → (∀ {J} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Δ ⊢ rename⋆ ρ⋆ A )
 rename ρ⋆ ρ (` x)    = ` (ρ x)
-rename ρ⋆ ρ (ƛ N)    = ƛ rename ρ⋆ (ext ρ⋆ ρ) N
+rename ρ⋆ ρ (ƛ N)    = ƛ (rename ρ⋆ (ext ρ⋆ ρ) N)
 rename ρ⋆ ρ (L · M)  = rename ρ⋆ ρ L · rename ρ⋆ ρ M 
 rename ρ⋆ ρ (Λ N)    = Λ rename (ext⋆ ρ⋆) (ext⋆⋆ ρ⋆ ρ) N 
 rename {Γ}{Δ} ρ⋆ ρ (_·⋆_ {B = B} t A) =
@@ -751,15 +795,20 @@ _[_]⋆⋆ {J}{Γ}{K}{B} t A =
 ## Values
 
 \begin{code}
-data TValue :  ∀ {Γ K} → Γ ⊢⋆ K → Set where
+data Value⋆ :  ∀ {Γ K} → Γ ⊢⋆ K → Set where
 
   V-Π_ : ∀ {Φ K} {N : Φ ,⋆ K ⊢⋆ *}
       ----------------------------
-    → TValue (Π N)
+    → Value⋆ (Π N)
 
   _V-⇒_ : ∀ {Φ} {S : Φ ⊢⋆ *} {T : Φ ⊢⋆ *}
       -----------------------------------
-    → TValue (S ⇒ T)
+    → Value⋆ (S ⇒ T)
+
+  V-ƛ_ : ∀ {Φ K J} {N : Φ ,⋆ K ⊢⋆ J}
+      ----------------------------
+    → Value⋆ (ƛ N)
+
 
 data Value :  ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Set where
 
@@ -824,7 +873,7 @@ data Progress⋆ {K} (M : ∅ ⊢⋆ K) : Set where
       -------------
     → Progress⋆ M
   done :
-      TValue M
+      Value⋆ M
       ----------
     → Progress⋆ M
 \end{code}
@@ -832,8 +881,9 @@ data Progress⋆ {K} (M : ∅ ⊢⋆ K) : Set where
 \begin{code}
 progress⋆ : ∀ {K} → (M : ∅ ⊢⋆ K) → Progress⋆ M
 progress⋆ (` ())
-progress⋆ (Π M) = done V-Π_
+progress⋆ (Π M)   = done V-Π_
 progress⋆ (M ⇒ N) = done _V-⇒_
+progress⋆ (ƛ M)    = done V-ƛ_
 
 \end{code}
 
@@ -909,9 +959,9 @@ The evaluator takes gas and a term and returns the corresponding steps.
 \begin{code}
 eval : ∀ {A : ∅ ⊢⋆ *}
   → Gas
-  → (L : ∅ ⊢ A)
+  → (M : ∅ ⊢ A)
     -----------
-  → Steps L
+  → Steps M
 eval (gas zero) M = steps done out-of-gas
 eval (gas (suc n)) M with progress M
 eval (gas (suc n)) M | step {N} p  with eval (gas n) N
