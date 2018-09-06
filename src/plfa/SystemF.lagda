@@ -923,7 +923,7 @@ data Value :  ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Set where
   V-wrap : ∀{Γ}
     → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
     → {M : Γ ⊢ S [ μ S ]⋆}
-    → Value M
+      ----------------
     → Value (wrap S M)
 \end{code}
 
@@ -980,15 +980,8 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
     → (ƛ N) · W —→ N [ W ]
 
   β-Λ : ∀ {Γ}{B : ∥ Γ ∥ ,⋆ * ⊢⋆ *}{N : Γ ,⋆ * ⊢ B}{W}
-    -- → TValue W 
       -------------------
     → (Λ N) ·⋆ W —→ N [ W ]⋆⋆
-
-  ξ-wrap : ∀{Γ}
-    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
-    → {M M' : Γ ⊢ S [ μ S ]⋆}
-    → M —→ M'
-    → wrap S M —→ wrap S M'
 
   ξ-unwrap : ∀{Γ}
     → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
@@ -1053,12 +1046,10 @@ progress (Λ M)    = done V-Λ_
 progress (M ·⋆ A) with progress M
 progress (M ·⋆ A)      | step p  = step (ξ-·⋆ p)
 progress (.(Λ _) ·⋆ A) | done V-Λ_ = step β-Λ
-progress (wrap A M) with progress M
-... | step p  = step (ξ-wrap p)
-... | done vM = done (V-wrap vM)
+progress (wrap A M) = done V-wrap
 progress (unwrap M) with progress M
 progress (unwrap M) | step p = step (ξ-unwrap p)
-progress (unwrap .(wrap _ _)) | done (V-wrap vM) = step β-wrap
+progress (unwrap .(wrap _ _)) | done V-wrap = step β-wrap
 \end{code}
 
 ## Evaluation
