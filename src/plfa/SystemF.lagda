@@ -714,7 +714,6 @@ substcons σ⋆ σ t Z     = t
 substcons σ⋆ σ t (S x) = σ x
 \end{code}
 
-
 \begin{code}
 _[_] : ∀ {J Γ} {A B : ∥ Γ ∥ ⊢⋆ J}
         → Γ , B ⊢ A
@@ -773,13 +772,13 @@ data Value :  ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Set where
     → Value (Λ N)
 \end{code}
 
-## Type Reduction
+## Intrinsically Kind Preserving Type Reduction
 
 \begin{code}
 infix 2 _—→⋆_
 
 data _—→⋆_ : ∀ {Γ J} → (Γ ⊢⋆ J) → (Γ ⊢⋆ J) → Set where
-
+  
 \end{code}
 
 ## Intrinsically Type Preserving Reduction
@@ -811,7 +810,7 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
     → (ƛ N) · W —→ N [ W ]
 
   β-Λ : ∀ {Γ}{B : ∥ Γ ∥ ,⋆ * ⊢⋆ *}{N : Γ ,⋆ * ⊢ B}{W}
-    → TValue W 
+    -- → TValue W 
       -------------------
     → (Λ N) ·⋆ W —→ N [ W ]⋆⋆
 
@@ -819,10 +818,10 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
 
 \begin{code}
 data Progress⋆ {K} (M : ∅ ⊢⋆ K) : Set where
-{-  step : ∀ {N : ∅ ⊢ A}
-    → M —→ N
+  step : ∀ {N : ∅ ⊢⋆ K}
+    → M —→⋆ N
       -------------
-    → Progress M -}
+    → Progress⋆ M
   done :
       TValue M
       ----------
@@ -854,13 +853,12 @@ progress : ∀ {A} → (M : ∅ ⊢ A) → Progress M
 progress (` ())
 progress (ƛ M)    = done V-ƛ
 progress (L · M)  with progress L
-...                   | step p = step (ξ-·₁ p)
+...                   | step p  = step (ξ-·₁ p)
 ...                   | done vL with progress M
 ...                              | step p  = step (ξ-·₂ vL p)
 progress (.(ƛ _) · M) | done V-ƛ | done vM = step (β-ƛ vM)
 progress (Λ M)    = done V-Λ_
 progress (M ·⋆ A) with progress M
-progress (M ·⋆ A) | step p = step (ξ⋆-· p)
-progress (M ·⋆ A) | done vM with progress⋆ A
-progress (.(Λ _) ·⋆ A) | done V-Λ_ | done vA = step (β-Λ vA)
+progress (M ·⋆ A)      | step p  = step (ξ⋆-· p)
+progress (.(Λ _) ·⋆ A) | done V-Λ_ = step β-Λ
 \end{code}
