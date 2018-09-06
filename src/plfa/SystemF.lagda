@@ -593,6 +593,11 @@ data _⊢_ : ∀ {J} (Γ : Ctx) → ∥ Γ ∥ ⊢⋆ J → Set where
     → (A : ∥ Γ ∥ ⊢⋆ *)
       ---------------
     → Γ ⊢ B [ A ]⋆
+
+  wrap : ∀{Γ}
+    → (S : ∥ Γ ∥ ,⋆ * ⊢⋆ *)
+    → (M : Γ ⊢ S [ μ S ]⋆)
+    → Γ ⊢ μ S
 \end{code}
 
 ## Remainder
@@ -718,6 +723,18 @@ rename {Γ}{Δ} ρ⋆ ρ (_·⋆_ {B = B} t A) =
                  (trans (subst⋆cong _ _ (rename⋆subst⋆cons ρ⋆ A) B)
                         (rename⋆subst⋆ (subst⋆cons `_ A) ρ⋆ B) ) )
           (rename ρ⋆ ρ t ·⋆ rename⋆ ρ⋆ A) -- the important bit
+rename {Γ}{Δ} ρ⋆ ρ (wrap M N) =
+  wrap (rename⋆ (ext⋆ ρ⋆) M)
+       (substEq (λ A → Δ ⊢ A)
+                (trans (sym (rename⋆subst⋆ (subst⋆cons `_ (μ M)) ρ⋆ M))
+                       (trans (subst⋆cong
+                                 _
+                                 _
+                                 (λ x → sym (rename⋆subst⋆cons _ _ x)) M)
+                              (subst⋆rename⋆
+                                (ext⋆ ρ⋆)
+                                (subst⋆cons `_ (μ (rename⋆ (ext⋆ ρ⋆) M))) M)))
+                (rename ρ⋆ ρ N))
 \end{code}
 
 \begin{code}
@@ -792,6 +809,20 @@ subst {Γ}{Δ} σ⋆ σ (_·⋆_ {B = B} L M) =
                                     B)
                         (subst⋆comp (subst⋆cons `_ M) σ⋆ B)))
           (subst σ⋆ σ L ·⋆ subst⋆ σ⋆ M)
+subst {Γ}{Δ} σ⋆ σ (wrap M N) =
+  wrap (subst⋆ (exts⋆ σ⋆) M)
+       (substEq (λ A → Δ ⊢ A)
+                (trans (sym (subst⋆comp (subst⋆cons `_ (μ M)) σ⋆ M))
+                       (trans (subst⋆cong
+                                _
+                                _
+                                (λ x → sym (subst⋆subst⋆cons _ _ x))
+                                M)
+                              (subst⋆comp
+                                (exts⋆ σ⋆)
+                                (subst⋆cons `_ (μ (subst⋆ (exts⋆ σ⋆) M)))
+                                M)))
+                (subst σ⋆ σ N))
 \end{code}
 
 \begin{code}
@@ -870,6 +901,12 @@ data Value :  ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Set where
     → {N : Γ ,⋆ K ⊢ B}
       ----------------
     → Value (Λ N)
+
+  V-wrap : ∀{Γ}
+    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
+    → {M : Γ ⊢ S [ μ S ]⋆}
+    → Value M
+    → Value (wrap S M)
 \end{code}
 
 ## Intrinsically Kind Preserving Type Reduction
@@ -914,7 +951,7 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
       --------------
     → V · M —→ V · M′
 
-  ξ⋆-· : ∀ {Γ B}{L L′ : Γ ⊢ Π B}{A}
+  ξ-·⋆ : ∀ {Γ B}{L L′ : Γ ⊢ Π B}{A}
     → L —→ L′
       -----------------
     → L ·⋆ A —→ L′ ·⋆ A
@@ -928,6 +965,13 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
     -- → TValue W 
       -------------------
     → (Λ N) ·⋆ W —→ N [ W ]⋆⋆
+
+  ξ-wrap : ∀{Γ}
+    → {S : ∥ Γ ∥ ,⋆ * ⊢⋆ *}
+    → {M M' : Γ ⊢ S [ μ S ]⋆}
+    → M —→ M'
+    → wrap S M —→ wrap S M'
+
 
 \end{code}
 
@@ -980,8 +1024,11 @@ progress (L · M)  with progress L
 progress (.(ƛ _) · M) | done V-ƛ | done vM = step (β-ƛ vM)
 progress (Λ M)    = done V-Λ_
 progress (M ·⋆ A) with progress M
-progress (M ·⋆ A)      | step p  = step (ξ⋆-· p)
+progress (M ·⋆ A)      | step p  = step (ξ-·⋆ p)
 progress (.(Λ _) ·⋆ A) | done V-Λ_ = step β-Λ
+progress (wrap A M) with progress M
+... | step p  = step (ξ-wrap p)
+... | done vM = done (V-wrap vM)
 \end{code}
 
 ## Evaluation
