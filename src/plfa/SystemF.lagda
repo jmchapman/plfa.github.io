@@ -542,6 +542,73 @@ ext⋆⋆ {Γ}{Δ} ρ⋆ ρ {J}{K}{A} (T x) =
 \end{code}
 
 \begin{code}
+{-
+Ren⋆ : Ctx → Ctx → Set
+Ren⋆ Γ Δ = ∀{K} → ∥ Γ ∥  ∋⋆ K → ∥ Δ ∥ ∋⋆ K
+Ren : Ctx → Ctx → Set
+Ren Γ Δ = Σ (Ren⋆ Γ Δ) λ ρ⋆ → ∀{J}{A : ∥ Γ ∥ ⊢⋆ J} → Γ ∋ A → Δ ∋ rename⋆ ρ⋆ A
+-}
+\end{code}
+
+\begin{code}
+{-
+data Ren⋆' (Δ : Ctx⋆) : Ctx⋆ → Set where
+  e    : Ren⋆' Δ ∅
+  _,⋆_ : ∀{Γ} → (σ : Ren⋆' Δ Γ) → ∀{K}(A : Δ ∋⋆ K) → Ren⋆' Δ (Γ ,⋆ K)
+
+lookup⋆' : ∀{Δ Γ} → Ren⋆' Δ Γ → ∀ {J} → Γ ∋⋆ J → Δ ∋⋆ J
+lookup⋆' (σ ,⋆ A) Z = A
+lookup⋆' (σ ,⋆ A) (S x) = lookup⋆' σ x
+
+rename⋆' : ∀{Δ Γ} → Ren⋆' Δ Γ → ∀ {J} → Γ ⊢⋆ J → Δ ⊢⋆ J
+rename⋆' σ (` x)   = ` lookup⋆' σ x
+rename⋆' σ (Π B)   = Π rename⋆' {!!} B
+rename⋆' σ (A ⇒ B) = rename⋆' σ A ⇒ rename⋆' σ B
+
+data Ren' (Δ : Ctx) : Ctx → Set
+∥Ren∥ : ∀{Δ Γ} → Ren' Δ Γ → Ren⋆' ∥ Δ ∥ ∥ Γ ∥
+
+data Ren' Δ where
+  e    : Ren' Δ ∅
+  _,_  : ∀{Γ}
+   → (σ : Ren' Δ Γ)
+   → ∀{K}{A : ∥ Γ ∥ ⊢⋆ K}
+   → Δ ∋ rename⋆' (∥Ren∥ σ) A
+   → Ren' Δ (Γ , A)
+  _,⋆_ : ∀{Γ} → Ren' Δ Γ → ∀{K}(A : ∥ Δ ∥ ∋⋆ K) → Ren' Δ (Γ ,⋆ K)
+  
+∥Ren∥ e        = e
+∥Ren∥ (x , t)  = ∥Ren∥ x
+∥Ren∥ (x ,⋆ A) = ∥Ren∥ x ,⋆ A
+
+lookup' : ∀{Δ Γ}(σ : Ren' Δ Γ)
+  → ∀ {J}{A : ∥ Γ ∥ ⊢⋆ J}
+  → Γ ∋ A
+  → Δ ∋ rename⋆' (∥Ren∥ σ) A
+lookup' (σ , x) Z = x
+lookup' (σ , x₁) (S x) = lookup' σ x
+lookup' (σ ,⋆ A) (T x) = {!lookup' σ x!}
+
+rename' : ∀{Δ Γ}
+  (σ : Ren' Δ Γ)
+  → ∀{J}{A : ∥ Γ ∥ ⊢⋆ J}
+  → Γ ⊢ A
+  → Δ ⊢ rename⋆' (∥Ren∥ σ) A
+rename' σ (` x) = ` lookup' σ x
+rename' σ (ƛ x) = ƛ rename' {!!} x
+rename' σ (x · x₁) = rename' σ x · rename' σ x₁ 
+rename' σ (Λ x) = Λ rename' {!!} x
+rename' σ (x ·⋆ A) = {!rename' σ x ·⋆ rename⋆' (∥Ren∥ σ) A!}
+
+rename'' : ∀ {Γ Δ}
+  → (∀ {J} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ∋ A → Σ (∥ Δ ∥ ⊢⋆ J) (λ A → Δ ∋ A))
+    --------------------------------------------------------------
+  → (∀ {J} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ⊢ A → Σ (∥ Δ ∥ ⊢⋆ J) λ A → Δ ⊢ A)
+rename'' = {!!}
+-}
+\end{code}
+
+\begin{code}
 rename : ∀ {Γ Δ}
   → (ρ⋆ : ∀ {J} → ∥ Γ ∥ ∋⋆ J → ∥ Δ ∥ ∋⋆ J)
   → (∀ {J} {A : ∥ Γ ∥ ⊢⋆ J} → Γ ∋ A → Δ ∋ rename⋆ ρ⋆ A)
@@ -711,6 +778,5 @@ data _—→_ : ∀ {J Γ} {A : ∥ Γ ∥ ⊢⋆ J} → (Γ ⊢ A) → (Γ ⊢ 
     → Value W
       -------------------
     → (ƛ N) · W —→ N [ W ]
-
 \end{code}
 
