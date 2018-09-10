@@ -1106,3 +1106,67 @@ eval (gas (suc n)) M | step {N} p  with eval (gas n) N
 eval (gas (suc n)) M | step {N} p | steps ps q = steps (continue p ps) q
 eval (gas (suc n)) M | done vM = steps done (done vM)
 \end{code}
+
+## Examples
+
+0    = λ x . λ y . x
+succ = λ n . λ x . λ y . y n
+case = λ n . λ a . λ f . n a f
+
+--
+
+S = ∀ R . (R → (S → R) → R)
+
+0    = Λ R . λ x : R . λ y : S → R . x
+     : S
+succ = λ n : S . Λ R . λ x : R . λ y : S → R . y n
+     : S → S
+case = λ n : S . Λ R . λ a : R . λ f : S → R . n [R] a f
+     : S → ∀ R . (R → (S → R) → R)
+
+--
+
+M = μ X . G X
+G X = ∀ R. R → (X → R) → R)
+μ X . G X = ∀ X . (G X → X) → X -- what is the status of this?
+N = G M
+in  : N → M
+out : M → N
+
+0    = Λ R . λ x : R . λ y : M → R . x
+     : N
+succ = λ n : N . Λ R . λ x : R . λ y : M → R . y (in n)
+     : N → N
+case = λ n : N . Λ R . λ a : R . λ f : N → N . n [R] a (f ∘ out)
+     : N → ∀ R . R → (N → R) → R
+
+
+--
+
+\begin{code}
+G : ∀{Γ} → Γ ,⋆  * ⊢⋆ *
+G = Π ` Z ⇒ (` (S Z) ⇒ (` Z)) ⇒ (` Z)
+
+M : ∀{Γ} → Γ ⊢⋆ *
+M = μ G
+
+N : ∀{Γ} → Γ ⊢⋆ *
+N  =  G [ M ]⋆
+
+in' : ∀ {Γ} → Γ ⊢ N ⇒ M
+in' = ƛ wrap G (` Z)
+
+{-
+out' : ∅ ⊢ M ⇒ N
+out' = {!!}
+-}
+
+Zero : ∅ ⊢ N
+Zero = Λ (ƛ (ƛ (` (S (Z )))))
+
+{-
+Succ : ∅ ⊢ N ⇒ N
+Succ = ƛ (Λ (ƛ (ƛ (` Z · {!weaken⋆⋆ ( in' _⊢_.· (_⊢_.` (S (T (S (Z {Γ = ∅}{A = N})))))) !}))))
+\end{code}
+-}
+
