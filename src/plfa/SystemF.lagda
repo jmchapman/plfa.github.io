@@ -1167,6 +1167,7 @@ Zero = Λ (ƛ (ƛ (` (S (Z )))))
 {-
 Succ : ∅ ⊢ N ⇒ N
 Succ = ƛ (Λ (ƛ (ƛ (` Z · {!weaken⋆⋆ ( in' _⊢_.· (_⊢_.` (S (T (S (Z {Γ = ∅}{A = N})))))) !}))))
-\end{code}
 -}
+\end{code}
+
 
